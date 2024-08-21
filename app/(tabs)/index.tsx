@@ -1,70 +1,133 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Button from '@/components/Button';
+import { Task } from '@/models/Task';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function HomeScreen({ navigation }: { navigation: any }) {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
-export default function HomeScreen() {
+  useEffect(() => {
+    loadTasksFromStorage();
+  }, []);
+
+  const saveTasksToStorage = async (tasks: Task[]) => {
+    try {
+      await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Failed to save tasks to storage', error);
+    }
+  };
+
+  const loadTasksFromStorage = async () => {
+    try {
+      const tasksString = await AsyncStorage.getItem('tasks');
+      if (tasksString) {
+        setTasks(JSON.parse(tasksString));
+      }
+    } catch (error) {
+      console.error('Failed to load tasks from storage', error);
+    }
+  };
+
+  const addTask = (newTask: string) => {
+    const updatedTasks = [...tasks, { id: Date.now().toString(), text: newTask }];
+    setTasks(updatedTasks);
+    saveTasksToStorage(updatedTasks);
+  };
+
+  const deleteTask = (id: string) => {
+    const updatedTasks = tasks.filter(task => task.id !== id);
+    setTasks(updatedTasks);
+    saveTasksToStorage(updatedTasks);
+  };
+
+  const startEditingTask = (id: string, text: string) => {
+    setEditingTask(id);
+    setEditingText(text);
+  }
+
+  const editTask = (id: string, newText: string) => {
+    const updatedTasks = tasks.map(task => task.id === id ? { ...task, text: newText } : task);
+    setTasks(updatedTasks);
+    saveTasksToStorage(updatedTasks);
+    setEditingTask(null);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView>
+      <View style={styles.container}>
+        <Button
+          title="Ajouter"
+          width={200}
+          onPress={() => navigation.navigate('AddTask', { addTask })}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <FlatList
+          data={tasks}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.taskContainer}>
+              {editingTask === item.id ? (
+                <TextInput
+                  style={[styles.input, { maxWidth: 90 }]}
+                  value={editingText}
+                  onChangeText={setEditingText}
+                  onBlur={() => editTask(item.id, editingText)}
+                />
+              ) : (
+                <Text style={styles.taskText}>{item.text}</Text>
+              )}
+              <View style={styles.buttons}>
+                <Button
+                  title={editingTask === item.id ? "Enregistrer" : "Modifier"}
+                  width={100}
+                  onPress={() => {
+                    if (editingTask === item.id) {
+                      editTask(item.id, editingText);
+                    } else {
+                      startEditingTask(item.id, item.text);
+                    }
+                  }}
+                />
+                <Button title="Supprimer" width={100} onPress={() => deleteTask(item.id)} />
+              </View>
+            </View>
+          )}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginBottom: 10,
+    height: 40,
+  },
+  taskContainer: {
+    display: 'flex',
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    height: 80,
+    gap: 10,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  taskText: {
+    flex: 1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  buttons: {
+    flexDirection: 'row',
+    gap: 10,
   },
 });

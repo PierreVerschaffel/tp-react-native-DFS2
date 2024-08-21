@@ -1,37 +1,21 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+// App.tsx ou où vous définissez vos routes
+import { createStackNavigator } from '@react-navigation/stack';
+import HomeScreen from './index';
+import AddTaskScreen from './addTask';
+import { LogBox } from 'react-native';
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+LogBox.ignoreLogs([
+  'Non-serializable values were found in the navigation state',
+]);
+const Stack = createStackNavigator();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function App() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+
+      <Stack.Navigator>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="AddTask" component={AddTaskScreen} />
+      </Stack.Navigator>
+
   );
 }
